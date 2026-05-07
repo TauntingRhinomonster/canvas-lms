@@ -24,6 +24,19 @@ const I18n = createI18nScope('planner')
 
 export const REPLY_TO_TOPIC = 'reply_to_topic'
 export const REPLY_TO_ENTRY = 'reply_to_entry'
+const PLANNER_PREP_DAY_HOUR = 22
+
+function getDateBucketMoment(apiResponse, plannableDate) {
+  const dateBucketMoment = plannableDate.clone().startOf('day')
+  const isPlannerNote = apiResponse.plannable_type === 'planner_note'
+  const isAllDayEvent = Boolean(apiResponse.plannable?.all_day)
+
+  if (!isPlannerNote && !isAllDayEvent && plannableDate.hour() < PLANNER_PREP_DAY_HOUR) {
+    return dateBucketMoment.subtract(1, 'day')
+  }
+
+  return dateBucketMoment
+}
 
 const getItemDetailsFromPlannable = apiResponse => {
   const {plannable, plannable_type, planner_override, details: item_details} = apiResponse
@@ -148,6 +161,7 @@ export function transformApiToInternalItem(apiResponse, courses, groups, timeZon
   const details = getItemDetailsFromPlannable(apiResponse, timeZone)
 
   const plannableDate = moment.tz(apiResponse.plannable_date, timeZone)
+  const dateBucketMoment = getDateBucketMoment(apiResponse, plannableDate)
 
   if (!contextInfo.context && apiResponse.plannable_type === 'planner_note' && details.course_id) {
     const course = courses.find(c => c.id === details.course_id)
@@ -161,7 +175,7 @@ export function transformApiToInternalItem(apiResponse, courses, groups, timeZon
   return {
     ...contextInfo,
     id: apiResponse.plannable_id,
-    dateBucketMoment: moment.tz(plannableDate, timeZone).startOf('day'),
+    dateBucketMoment,
     type: getItemType(apiResponse.plannable_type),
     status: apiResponse.submissions,
     newActivity:

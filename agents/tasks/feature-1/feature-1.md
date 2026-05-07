@@ -1,0 +1,2 @@
+# Better To-do List
+A list that actually organizes assignments based on user feedback. If a user prefers that any item due before 10pm should show up on the day previous as tasks that need to be done. Then, the user can see that the tasks has an earlier due date than midnight the next night.
