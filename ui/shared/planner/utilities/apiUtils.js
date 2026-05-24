@@ -26,12 +26,26 @@ export const REPLY_TO_TOPIC = 'reply_to_topic'
 export const REPLY_TO_ENTRY = 'reply_to_entry'
 const PLANNER_PREP_DAY_HOUR = 22
 
-function getDateBucketMoment(apiResponse, plannableDate) {
+function resolvePushForwardThresholdHour(pushForwardTimeOptions) {
+  if (!pushForwardTimeOptions?.enabled) {
+    return PLANNER_PREP_DAY_HOUR
+  }
+
+  const hour = pushForwardTimeOptions.hour
+  if (typeof hour !== 'number' || !Number.isInteger(hour) || hour < 0 || hour > 23) {
+    return PLANNER_PREP_DAY_HOUR
+  }
+
+  return hour
+}
+
+function getDateBucketMoment(apiResponse, plannableDate, pushForwardTimeOptions) {
+  const thresholdHour = resolvePushForwardThresholdHour(pushForwardTimeOptions)
   const dateBucketMoment = plannableDate.clone().startOf('day')
   const isPlannerNote = apiResponse.plannable_type === 'planner_note'
   const isAllDayEvent = Boolean(apiResponse.plannable?.all_day)
 
-  if (!isPlannerNote && !isAllDayEvent && plannableDate.hour() < PLANNER_PREP_DAY_HOUR) {
+  if (!isPlannerNote && !isAllDayEvent && plannableDate.hour() < thresholdHour) {
     return dateBucketMoment.subtract(1, 'day')
   }
 
@@ -138,7 +152,13 @@ export function findNextLink(response) {
 /**
  * Translates the API data to the format the planner expects
  * */
-export function transformApiToInternalItem(apiResponse, courses, groups, timeZone) {
+export function transformApiToInternalItem(
+  apiResponse,
+  courses,
+  groups,
+  timeZone,
+  pushForwardTimeOptions,
+) {
   if (timeZone == null)
     throw new Error('timezone is required when interpreting api data in transformApiToInternalItem')
 
@@ -161,7 +181,7 @@ export function transformApiToInternalItem(apiResponse, courses, groups, timeZon
   const details = getItemDetailsFromPlannable(apiResponse, timeZone)
 
   const plannableDate = moment.tz(apiResponse.plannable_date, timeZone)
-  const dateBucketMoment = getDateBucketMoment(apiResponse, plannableDate)
+  const dateBucketMoment = getDateBucketMoment(apiResponse, plannableDate, pushForwardTimeOptions)
 
   if (!contextInfo.context && apiResponse.plannable_type === 'planner_note' && details.course_id) {
     const course = courses.find(c => c.id === details.course_id)
