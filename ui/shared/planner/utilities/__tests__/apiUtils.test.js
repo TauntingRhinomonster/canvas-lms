@@ -674,8 +674,8 @@ describe('transformApiToInternalItem', () => {
       }),
     })
     const result = transformApiToInternalItem(apiResponse, courses, groups, 'Europe/Paris')
-    const expectedBucket = moment.tz('2017-05-23', 'Europe/Paris')
-    expect(result.dateBucketMoment.isSame(expectedBucket)).toBeTruthy()
+    const expectedBucket = moment.tz('2017-05-22', 'Europe/Paris').startOf('day')
+    expect(result.dateBucketMoment.isSame(expectedBucket, 'day')).toBe(true)
   })
 
   it('handles items without context (notes to self)', () => {
@@ -888,6 +888,179 @@ describe('transformApiToInternalItem', () => {
     apiResponse.planner_override = {marked_complete: false}
     result = transformApiToInternalItem(apiResponse, courses, groups, 'UTC')
     expect(result.completed).toBeFalsy()
+  })
+})
+
+describe('transformApiToInternalItem — push-forward time (P.F.T.) bucketing', () => {
+  const TZ = 'America/Denver'
+
+  function makePftApiResponse(overrides = {}) {
+    return makeApiResponse({
+      plannable: makeAssignment({all_day: false, ...overrides.plannable}),
+      ...overrides,
+    })
+  }
+
+  it('should keep an assignment due exactly at 9:00 AM on the same day when P.F.T. is 9:00 AM', () => {
+    const apiResponse = makePftApiResponse()
+    const plannableDate = moment.tz('2026-05-21T09:00:00', TZ)
+
+    const result = transformApiToInternalItem(
+      {...apiResponse, plannable_date: plannableDate.toISOString()},
+      courses,
+      groups,
+      TZ,
+      {enabled: true, hour: 9},
+    )
+
+    const expected = moment.tz('2026-05-21', TZ).startOf('day')
+    expect(result.dateBucketMoment.isSame(expected, 'day')).toBe(true)
+  })
+
+  it('should bucket an assignment due at 8:59 AM to the previous day when P.F.T. is 9:00 AM', () => {
+    const apiResponse = makePftApiResponse()
+    const plannableDate = moment.tz('2026-05-21T08:59:00', TZ)
+
+    const result = transformApiToInternalItem(
+      {...apiResponse, plannable_date: plannableDate.toISOString()},
+      courses,
+      groups,
+      TZ,
+      {enabled: true, hour: 9},
+    )
+
+    const expected = moment.tz('2026-05-20', TZ).startOf('day')
+    expect(result.dateBucketMoment.isSame(expected, 'day')).toBe(true)
+  })
+
+  it('should bucket an assignment due at 8:59 PM to the previous day when P.F.T. is 9:00 PM', () => {
+    const apiResponse = makePftApiResponse()
+    const plannableDate = moment.tz('2026-05-21T20:59:00', TZ)
+
+    const result = transformApiToInternalItem(
+      {...apiResponse, plannable_date: plannableDate.toISOString()},
+      courses,
+      groups,
+      TZ,
+      {enabled: true, hour: 21},
+    )
+
+    const expected = moment.tz('2026-05-20', TZ).startOf('day')
+    expect(result.dateBucketMoment.isSame(expected, 'day')).toBe(true)
+  })
+
+  it('should keep an assignment due exactly at P.F.T. on the same day', () => {
+    const apiResponse = makePftApiResponse()
+    const plannableDate = moment.tz('2026-05-21T21:00:00', TZ)
+
+    const result = transformApiToInternalItem(
+      {...apiResponse, plannable_date: plannableDate.toISOString()},
+      courses,
+      groups,
+      TZ,
+      {enabled: true, hour: 21},
+    )
+
+    const expected = moment.tz('2026-05-21', TZ).startOf('day')
+    expect(result.dateBucketMoment.isSame(expected, 'day')).toBe(true)
+  })
+
+  it('should keep an assignment due at 10:01 PM on the same day when P.F.T. is 10:00 PM', () => {
+    const apiResponse = makePftApiResponse()
+    const plannableDate = moment.tz('2026-05-21T22:01:00', TZ)
+
+    const result = transformApiToInternalItem(
+      {...apiResponse, plannable_date: plannableDate.toISOString()},
+      courses,
+      groups,
+      TZ,
+      {enabled: true, hour: 22},
+    )
+
+    const expected = moment.tz('2026-05-21', TZ).startOf('day')
+    expect(result.dateBucketMoment.isSame(expected, 'day')).toBe(true)
+  })
+
+  it('should preserve legacy 10 PM bucketing when P.F.T. is disabled', () => {
+    const apiResponse = makePftApiResponse()
+    const plannableDate = moment.tz('2026-05-21T09:00:00', TZ)
+
+    const result = transformApiToInternalItem(
+      {...apiResponse, plannable_date: plannableDate.toISOString()},
+      courses,
+      groups,
+      TZ,
+      {enabled: false, hour: 9},
+    )
+
+    const expected = moment.tz('2026-05-20', TZ).startOf('day')
+    expect(result.dateBucketMoment.isSame(expected, 'day')).toBe(true)
+  })
+
+  it('should preserve legacy 10 PM bucketing when P.F.T. options are omitted', () => {
+    const apiResponse = makePftApiResponse()
+    const plannableDate = moment.tz('2026-05-21T09:00:00', TZ)
+
+    const result = transformApiToInternalItem(
+      {...apiResponse, plannable_date: plannableDate.toISOString()},
+      courses,
+      groups,
+      TZ,
+    )
+
+    const expected = moment.tz('2026-05-20', TZ).startOf('day')
+    expect(result.dateBucketMoment.isSame(expected, 'day')).toBe(true)
+  })
+
+  it('should fall back to legacy 10 PM bucketing when P.F.T. hour is invalid', () => {
+    const apiResponse = makePftApiResponse()
+    const plannableDate = moment.tz('2026-05-21T09:00:00', TZ)
+
+    const result = transformApiToInternalItem(
+      {...apiResponse, plannable_date: plannableDate.toISOString()},
+      courses,
+      groups,
+      TZ,
+      {enabled: true, hour: 99},
+    )
+
+    const expected = moment.tz('2026-05-20', TZ).startOf('day')
+    expect(result.dateBucketMoment.isSame(expected, 'day')).toBe(true)
+  })
+
+  it('should NOT push a planner note due at 9:00 AM to the previous day', () => {
+    const apiResponse = makePftApiResponse({plannable_type: 'planner_note'})
+    const plannableDate = moment.tz('2026-05-21T09:00:00', TZ)
+
+    const result = transformApiToInternalItem(
+      {...apiResponse, plannable_date: plannableDate.toISOString()},
+      courses,
+      groups,
+      TZ,
+      {enabled: true, hour: 9},
+    )
+
+    const expected = moment.tz('2026-05-21', TZ).startOf('day')
+    expect(result.dateBucketMoment.isSame(expected, 'day')).toBe(true)
+  })
+
+  it('should NOT push an all-day event due at 9:00 AM to the previous day', () => {
+    const apiResponse = makePftApiResponse({
+      plannable_type: 'calendar_event',
+      plannable: makeCalendarEvent({all_day: true}),
+    })
+    const plannableDate = moment.tz('2026-05-21T09:00:00', TZ)
+
+    const result = transformApiToInternalItem(
+      {...apiResponse, plannable_date: plannableDate.toISOString()},
+      courses,
+      groups,
+      TZ,
+      {enabled: true, hour: 9},
+    )
+
+    const expected = moment.tz('2026-05-21', TZ).startOf('day')
+    expect(result.dateBucketMoment.isSame(expected, 'day')).toBe(true)
   })
 })
 
