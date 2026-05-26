@@ -149,6 +149,7 @@ export function getFirstNewActivityDate(fromMoment) {
             getState().courses,
             getState().groups,
             getState().timeZone,
+            getState().pushForwardTimeOptions,
           )
           dispatch(foundFirstNewActivityDate(first.dateBucketMoment))
         }
@@ -507,6 +508,7 @@ function transformItems(loadingOptions, items) {
       loadingOptions.getState().courses,
       loadingOptions.getState().groups,
       loadingOptions.getState().timeZone,
+      loadingOptions.getState().pushForwardTimeOptions,
     ),
   )
 }
