@@ -2819,6 +2819,14 @@ describe "Users API", type: :request do
         expect(json["hide_dashcard_color_overlays"]).to be true
         expect(json["comment_library_suggestions_enabled"]).to be false
       end
+
+      it "is able to update push forward time settings" do
+        json = api_call(:put, path, path_options, push_forward_time_enabled: true, push_forward_time_hour: 21)
+        expect(json["push_forward_time"]).to eql({ "enabled" => true, "hour" => 21 })
+
+        json = api_call(:get, path, path_options)
+        expect(json["push_forward_time"]).to eql({ "enabled" => true, "hour" => 21 })
+      end
     end
 
     context "a student" do

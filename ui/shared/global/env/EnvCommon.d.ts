@@ -176,6 +176,7 @@ export interface EnvCommon {
   PREFERENCES?: {
     hide_dashcard_color_overlays: boolean
     custom_colors: unknown
+    push_forward_time?: {enabled: boolean; hour: number} | null
   }
 
   SENTRY_FRONTEND?: {

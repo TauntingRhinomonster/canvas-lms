@@ -110,9 +110,9 @@ const pushForwardTimeOptions = handleAction(
       return candidate
     }
 
-    return undefined
+    return null
   },
-  undefined,
+  null,
 )
 
 const combinedReducers = combineReducers({

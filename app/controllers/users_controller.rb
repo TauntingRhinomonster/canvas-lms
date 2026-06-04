@@ -436,6 +436,7 @@ class UsersController < ApplicationController
                    dashboard_view: @current_user.dashboard_view(@domain_root_account),
                    hide_dashcard_color_overlays: @current_user.preferences[:hide_dashcard_color_overlays],
                    custom_colors: @current_user.custom_colors,
+                   push_forward_time: @current_user.push_forward_time,
                    learner_dashboard_tab_selection: @current_user.get_preference(:learner_dashboard_tab_selection) || "dashboard",
                    widget_dashboard_config: educator_config
                  },
@@ -454,6 +455,7 @@ class UsersController < ApplicationController
                    dashboard_view: @current_user.dashboard_view(@domain_root_account),
                    hide_dashcard_color_overlays: @current_user.preferences[:hide_dashcard_color_overlays],
                    custom_colors: @current_user.custom_colors,
+                   push_forward_time: @current_user.push_forward_time,
                    learner_dashboard_tab_selection: @current_user.get_preference(:learner_dashboard_tab_selection) || "dashboard",
                    widget_dashboard_config:
                  },
@@ -510,7 +512,8 @@ class UsersController < ApplicationController
              PREFERENCES: {
                dashboard_view: @current_user.dashboard_view(@domain_root_account),
                hide_dashcard_color_overlays: @current_user.preferences[:hide_dashcard_color_overlays],
-               custom_colors: @current_user.custom_colors
+               custom_colors: @current_user.custom_colors,
+               push_forward_time: @current_user.push_forward_time,
              },
              STUDENT_PLANNER_ENABLED: planner_enabled?,
              STUDENT_PLANNER_COURSES: planner_enabled? && map_courses_for_menu(@current_user.courses_with_primary_enrollment),
@@ -1795,6 +1798,13 @@ class UsersController < ApplicationController
   # @argument widget_dashboard_dark_mode [Boolean]
   #   If true, enables the dark color theme for the widget dashboard.
   #
+  # @argument push_forward_time_enabled [Boolean]
+  #   When true, planner items due before push_forward_time_hour are bucketed
+  #   to the previous calendar day.
+  #
+  # @argument push_forward_time_hour [Integer]
+  #   Local hour (0-23) used as the Push Forward Time threshold when enabled.
+  #
   # @example_request
   #
   #   curl 'https://<canvas>/api/v1/users/<user_id>/settings \
@@ -1808,7 +1818,7 @@ class UsersController < ApplicationController
     when request.get?
       return unless authorized_action(user, @current_user, :read)
 
-      render json: BOOLEAN_PREFS.index_with { |pref| !!user.preferences[pref] }
+      render json: user_settings_json(user)
     when request.put?
       return unless authorized_action(user, @current_user, [:manage, :manage_user_details])
 
@@ -1816,10 +1826,30 @@ class UsersController < ApplicationController
         user.preferences[pref] = value_to_boolean(params[pref]) unless params[pref].nil?
       end
 
+      if params.key?(:push_forward_time_enabled) || params.key?(:push_forward_time_hour)
+        current = user.push_forward_time
+        enabled = if params.key?(:push_forward_time_enabled)
+                    value_to_boolean(params[:push_forward_time_enabled])
+                  else
+                    current&.fetch(:enabled, false)
+                  end
+        hour = if params.key?(:push_forward_time_hour)
+                 params[:push_forward_time_hour].to_i
+               else
+                 current&.fetch(:hour, 22)
+               end
+
+        unless hour.between?(0, 23)
+          return render(json: { message: "push_forward_time_hour must be between 0 and 23" }, status: :bad_request)
+        end
+
+        user.push_forward_time = { enabled:, hour: }
+      end
+
       respond_to do |format|
         format.json do
           if user.save
-            render json: BOOLEAN_PREFS.index_with { |pref| !!user.preferences[pref] }
+            render json: user_settings_json(user)
           else
             render(json: user.errors, status: :bad_request)
           end
@@ -1827,6 +1857,13 @@ class UsersController < ApplicationController
       end
     end
   end
+
+  def user_settings_json(user)
+    BOOLEAN_PREFS.index_with { |pref| !!user.preferences[pref] }.merge(
+      push_forward_time: user.push_forward_time
+    )
+  end
+  private :user_settings_json
 
   def get_new_user_tutorial_statuses
     user = api_find(User, params[:id])

@@ -2029,6 +2029,21 @@ class User < ApplicationRecord
     preferences[:dashboard_view] = new_dashboard_view
   end
 
+  # Push Forward Time (P.F.T.) planner bucketing preference.
+  # Returns { enabled: Boolean, hour: Integer } when valid, else nil.
+  def push_forward_time
+    normalize_push_forward_time(preferences[:push_forward_time])
+  end
+
+  def push_forward_time=(value)
+    if value.nil?
+      preferences.delete(:push_forward_time)
+    else
+      normalized = normalize_push_forward_time(value)
+      preferences[:push_forward_time] = normalized if normalized
+    end
+  end
+
   def all_course_nicknames(courses = nil)
     if preferences[:course_nicknames] == UserPreferenceValue::EXTERNAL
       shard.activate do
@@ -4121,4 +4136,20 @@ class User < ApplicationRecord
   def all_calendar_events
     CalendarEvent.where(user: self).or(CalendarEvent.where(context: self))
   end
+
+  def normalize_push_forward_time(raw)
+    return nil if raw.blank?
+    return nil unless raw.is_a?(Hash)
+
+    enabled = raw[:enabled]
+    enabled = raw["enabled"] if enabled.nil?
+    hour = raw[:hour]
+    hour = raw["hour"] if hour.nil?
+
+    return nil unless [true, false].include?(enabled)
+    return nil unless hour.is_a?(Integer) && hour.between?(0, 23)
+
+    { enabled:, hour: }
+  end
+  private :normalize_push_forward_time
 end

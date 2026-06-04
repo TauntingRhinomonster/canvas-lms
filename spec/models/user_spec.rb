@@ -5106,6 +5106,34 @@ describe User do
     end
   end
 
+  describe "#push_forward_time" do
+    before do
+      user_factory(active_all: true)
+    end
+
+    it "returns nil when preference is unset" do
+      expect(@user.push_forward_time).to be_nil
+    end
+
+    it "returns normalized hash when preference is valid" do
+      @user.push_forward_time = { enabled: true, hour: 21 }
+      @user.save!
+      expect(@user.push_forward_time).to eql({ enabled: true, hour: 21 })
+    end
+
+    it "returns nil for invalid stored preference" do
+      @user.preferences[:push_forward_time] = { enabled: true, hour: 25 }
+      expect(@user.push_forward_time).to be_nil
+    end
+
+    it "clears preference when assigned nil" do
+      @user.push_forward_time = { enabled: false, hour: 22 }
+      @user.save!
+      @user.push_forward_time = nil
+      expect(@user.preferences[:push_forward_time]).to be_nil
+    end
+  end
+
   describe "user_can_edit_name?" do
     before(:once) do
       user_with_pseudonym
