@@ -45,7 +45,13 @@ export const DESIRED_ITEMS_TO_HAVE_LOADED = 14
 function handleSidebarLoadingResponse(response, dispatch, getState) {
   const nextUrl = findNextLink(response)
   const transformedItems = response.data.map(item =>
-    transformApiToInternalItem(item, getState().courses, getState().groups, getState().timeZone),
+    transformApiToInternalItem(
+      item,
+      getState().courses,
+      getState().groups,
+      getState().timeZone,
+      getState().pushForwardTimeOptions,
+    ),
   )
   dispatch(sidebarItemsLoaded({items: transformedItems, nextUrl}))
   dispatch(sidebarEnoughItemsLoaded())

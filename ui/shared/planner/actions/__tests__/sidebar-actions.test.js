@@ -21,6 +21,7 @@ import {setupServer} from 'msw/node'
 import moment from 'moment-timezone'
 import MockDate from 'mockdate'
 import {initialize} from '../../utilities/alertUtils'
+import {transformApiToInternalItem} from '../../utilities/apiUtils'
 
 import * as Actions from '../sidebar-actions'
 
@@ -72,6 +73,7 @@ function mockGetState(overrides) {
     timeZone: 'UTC',
     courses: [],
     groups: [],
+    pushForwardTimeOptions: {enabled: true, hour: 9},
   }
   return () => state
 }
@@ -106,6 +108,8 @@ describe('load items', () => {
   })
 
   it('dispatches SIDEBAR_ITEMS_LOADED with the proper payload on success', async () => {
+    transformApiToInternalItem.mockClear()
+
     server.use(
       http.get('*/api/v1/planner/items', () => {
         return new HttpResponse(JSON.stringify([{uniqueId: 1}, {uniqueId: 2}]), {
@@ -127,6 +131,8 @@ describe('load items', () => {
       payload: {items: ['transformed-1', 'transformed-2'], nextUrl: null},
     }
     expect(fakeDispatch).toHaveBeenCalledWith(expected)
+
+    expect(transformApiToInternalItem.mock.calls[0][4]).toEqual({enabled: true, hour: 9})
   })
 
   it('dispatches SIDEBAR_ITEMS_LOADED with the proper url on success', async () => {

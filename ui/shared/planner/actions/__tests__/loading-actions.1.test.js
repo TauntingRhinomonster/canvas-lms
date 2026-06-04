@@ -20,6 +20,7 @@ import {setupServer} from 'msw/node'
 import moment from 'moment-timezone'
 import * as Actions from '../loading-actions'
 import {initialize as alertInitialize} from '../../utilities/alertUtils'
+import {transformApiToInternalItem} from '../../utilities/apiUtils'
 
 vi.mock('../../utilities/apiUtils', async () => ({
   ...(await vi.importActual('../../utilities/apiUtils')),
@@ -193,6 +194,44 @@ describe('api actions', () => {
         response: expect.anything(),
         transformedItems: [{some: 'items', transformedToInternal: true}],
       })
+    })
+
+    it('passes pushForwardTimeOptions to transformApiToInternalItem (observee mode)', async () => {
+      const fromMoment = moment.tz('Asia/Tokyo')
+      let capturedUrl
+      const expectedPushForwardTimeOptions = {enabled: true, hour: 9}
+
+      transformApiToInternalItem.mockClear()
+
+      server.use(
+        http.get('*', ({request}) => {
+          capturedUrl = request.url
+          return new HttpResponse(JSON.stringify([{some: 'items'}]), {
+            status: 200,
+            headers: {'Content-Type': 'application/json'},
+          })
+        }),
+      )
+
+      await Actions.sendFetchRequest({
+        fromMoment,
+        getState: () => ({
+          loading: {},
+          singleCourse: false,
+          courses: [],
+          groups: [],
+          timeZone: 'UTC',
+          selectedObservee: '35',
+          currentUser: {id: '1'},
+          pushForwardTimeOptions: expectedPushForwardTimeOptions,
+        }),
+      })
+
+      const url = new URL(capturedUrl)
+      expect(url.searchParams.get('observed_user_id')).toBe('35')
+
+      expect(transformApiToInternalItem).toHaveBeenCalledTimes(1)
+      expect(transformApiToInternalItem.mock.calls[0][4]).toEqual(expectedPushForwardTimeOptions)
     })
   })
 

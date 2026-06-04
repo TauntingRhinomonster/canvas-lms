@@ -88,6 +88,33 @@ const firstNewActivityDate = handleAction(
   null,
 )
 
+const pushForwardTimeOptions = handleAction(
+  'INITIAL_OPTIONS',
+  (state, action) => {
+    const env = action.payload.env || {}
+
+    // This is intentionally defensive: the backing preference plumbing may not
+    // be available in all environments yet.
+    const candidate =
+      env?.PREFERENCES?.push_forward_time ||
+      env?.PREFERENCES?.planner_push_forward_time ||
+      env?.PUSH_FORWARD_TIME_OPTIONS ||
+      env?.PUSH_FORWARD_TIME
+
+    if (
+      candidate &&
+      typeof candidate.enabled === 'boolean' &&
+      typeof candidate.hour === 'number' &&
+      Number.isInteger(candidate.hour)
+    ) {
+      return candidate
+    }
+
+    return undefined
+  },
+  undefined,
+)
+
 const combinedReducers = combineReducers({
   courses,
   groups,
@@ -100,6 +127,7 @@ const combinedReducers = combineReducers({
   firstNewActivityDate,
   opportunities,
   singleCourse,
+  pushForwardTimeOptions,
   todo,
   ui,
   sidebar,
