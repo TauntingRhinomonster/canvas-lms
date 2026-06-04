@@ -28,6 +28,8 @@ import {
   reloadPlannerForObserver,
   renderToDoSidebar,
   responsiviser,
+  PushForwardTimeSettings,
+  applyPushForwardTimePreference,
 } from '@canvas/planner'
 import {asAxios, getPrefetchedXHR} from '@canvas/util/xhr'
 import {showFlashAlert, showFlashError} from '@instructure/platform-alerts'
@@ -372,6 +374,12 @@ class DashboardHeader extends React.Component {
                   </Button>
                 )}
               <div id="DashboardOptionsMenu_Container">
+                {this.props.planner_enabled && this.state.currentDashboard === 'planner' && (
+                  <PushForwardTimeSettings
+                    locale={this.props.env.MOMENT_LOCALE || 'en'}
+                    onApplied={applyPushForwardTimePreference}
+                  />
+                )}
                 <DashboardOptionsMenu
                   view={this.state.currentDashboard}
                   planner_enabled={this.props.planner_enabled}
@@ -451,6 +459,12 @@ class DashboardHeader extends React.Component {
                 )}
               <Flex.Item overflowY="visible">
                 <div id="DashboardOptionsMenu_Container">
+                  {this.props.planner_enabled && this.state.currentDashboard === 'planner' && (
+                    <PushForwardTimeSettings
+                      locale={this.props.env.MOMENT_LOCALE || 'en'}
+                      onApplied={applyPushForwardTimePreference}
+                    />
+                  )}
                   <DashboardOptionsMenu
                     view={this.state.currentDashboard}
                     planner_enabled={this.props.planner_enabled}

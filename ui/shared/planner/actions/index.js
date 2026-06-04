@@ -66,6 +66,7 @@ export const {
   clearDays,
   clearCourses,
   clearSidebar,
+  setPushForwardTimeOptions,
 } = createActions(
   'INITIAL_OPTIONS',
   'ADD_OPPORTUNITIES',
@@ -92,6 +93,7 @@ export const {
   'CLEAR_DAYS',
   'CLEAR_COURSES',
   'CLEAR_SIDEBAR',
+  'SET_PUSH_FORWARD_TIME_OPTIONS',
 )
 
 export * from './loading-actions'
