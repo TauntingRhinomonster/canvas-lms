@@ -43,3 +43,45 @@ it('clones the first new activity date moment', () => {
   })
   expect(nextState.firstNewActivityDate).not.toBe(mockMoment)
 })
+
+it('reads push_forward_time from INITIAL_OPTIONS env preferences', () => {
+  const nextState = rootReducer(
+    {},
+    {
+      type: 'INITIAL_OPTIONS',
+      payload: {
+        env: {
+          MOMENT_LOCALE: 'en',
+          TIMEZONE: 'UTC',
+          STUDENT_PLANNER_GROUPS: [],
+          current_user: {id: 1, display_name: 'Test User'},
+          PREFERENCES: {
+            push_forward_time: {enabled: true, hour: 9},
+          },
+        },
+      },
+    },
+  )
+  expect(nextState.pushForwardTimeOptions).toEqual({enabled: true, hour: 9})
+})
+
+it('ignores invalid push_forward_time preference values', () => {
+  const nextState = rootReducer(
+    {},
+    {
+      type: 'INITIAL_OPTIONS',
+      payload: {
+        env: {
+          MOMENT_LOCALE: 'en',
+          TIMEZONE: 'UTC',
+          STUDENT_PLANNER_GROUPS: [],
+          current_user: {id: 1, display_name: 'Test User'},
+          PREFERENCES: {
+            push_forward_time: {enabled: true, hour: 9.5},
+          },
+        },
+      },
+    },
+  )
+  expect(nextState.pushForwardTimeOptions).toBeNull()
+})
