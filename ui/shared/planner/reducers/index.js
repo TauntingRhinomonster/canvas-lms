@@ -18,7 +18,8 @@
 
 import moment from 'moment-timezone'
 import {combineReducers} from 'redux'
-import {handleAction} from 'redux-actions'
+import {handleAction, handleActions} from 'redux-actions'
+import {readPushForwardTimeFromEnv, normalizePushForwardTimeOptions} from '../utilities/pushForwardTimePreference'
 import days from './days-reducer'
 import loading from './loading-reducer'
 import courses from './courses-reducer'
@@ -88,29 +89,11 @@ const firstNewActivityDate = handleAction(
   null,
 )
 
-const pushForwardTimeOptions = handleAction(
-  'INITIAL_OPTIONS',
-  (state, action) => {
-    const env = action.payload.env || {}
-
-    // This is intentionally defensive: the backing preference plumbing may not
-    // be available in all environments yet.
-    const candidate =
-      env?.PREFERENCES?.push_forward_time ||
-      env?.PREFERENCES?.planner_push_forward_time ||
-      env?.PUSH_FORWARD_TIME_OPTIONS ||
-      env?.PUSH_FORWARD_TIME
-
-    if (
-      candidate &&
-      typeof candidate.enabled === 'boolean' &&
-      typeof candidate.hour === 'number' &&
-      Number.isInteger(candidate.hour)
-    ) {
-      return candidate
-    }
-
-    return null
+const pushForwardTimeOptions = handleActions(
+  {
+    INITIAL_OPTIONS: (_state, action) => readPushForwardTimeFromEnv(action.payload.env || {}),
+    SET_PUSH_FORWARD_TIME_OPTIONS: (_state, action) =>
+      normalizePushForwardTimeOptions(action.payload),
   },
   null,
 )

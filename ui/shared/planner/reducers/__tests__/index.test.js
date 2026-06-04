@@ -85,3 +85,12 @@ it('ignores invalid push_forward_time preference values', () => {
   )
   expect(nextState.pushForwardTimeOptions).toBeNull()
 })
+
+it('updates pushForwardTimeOptions from SET_PUSH_FORWARD_TIME_OPTIONS', () => {
+  const initialState = rootReducer({}, {type: 'FAKE_ACTION'})
+  const nextState = rootReducer(initialState, {
+    type: 'SET_PUSH_FORWARD_TIME_OPTIONS',
+    payload: {enabled: true, hour: 15},
+  })
+  expect(nextState.pushForwardTimeOptions).toEqual({enabled: true, hour: 15})
+})

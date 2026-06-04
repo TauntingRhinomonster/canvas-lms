@@ -34,6 +34,8 @@ import {
   toggleMissingItems,
   reloadWithObservee,
   getInitialOpportunities,
+  setPushForwardTimeOptions,
+  clearDays,
 } from './actions'
 import {registerScrollEvents} from './utilities/scrollUtils'
 import {initialize as initializeAlerts} from './utilities/alertUtils'
@@ -52,6 +54,18 @@ const WeeklyPlannerHeader = React.lazy(() => import('./components/WeeklyPlannerH
 export * from './components'
 
 export {loadThisWeekItems, toggleMissingItems}
+
+export {default as PushForwardTimeSettings} from './components/PushForwardTimeSettings'
+
+export function applyPushForwardTimePreference(options) {
+  // @ts-expect-error TS7005 (typescriptify)
+  if (!initializedOptions) return
+
+  store.dispatch(setPushForwardTimeOptions(options))
+  store.dispatch(clearDays())
+  const timeZone = initializedOptions.env.TIMEZONE
+  store.dispatch(getPlannerItems(moment.tz(timeZone).startOf('day')))
+}
 
 export {responsiviser}
 
